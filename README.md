@@ -479,5 +479,5 @@ This project is released under the MIT License for educational purposes.
 ---
 
 <p align="center">
-  <b>Built with ❤️ by the Amigoscode Community</b>
+  <b>Built with ❤️.</b>
 </p>
