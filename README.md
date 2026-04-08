@@ -469,10 +469,6 @@ This project is released under the MIT License for educational purposes.
 
 ---
 
-## Acknowledgments
-
-This project was created by [Amigoscode](https://amigoscode.com) as a comprehensive microservices learning resource.
-
 **Key Learning Outcomes:**
 - Microservices architecture patterns
 - Service discovery and load balancing
