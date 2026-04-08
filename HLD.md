@@ -1,75 +1,354 @@
-# High-Level Design (HLD): Microservices Architecture
+# Amigosservices: Microservices Architecture
 
-## System Overview
+## Table of Contents
+1. [Executive Summary](#executive-summary)
+2. [Architecture Overview](#architecture-overview)
+3. [Component Breakdown](#component-breakdown)
+4. [Data Flow](#data-flow)
+5. [Communication Patterns](#communication-patterns)
+6. [Data Management](#data-management)
+7. [Observability](#observability)
+8. [Deployment Architecture](#deployment-architecture)
 
-The **Amigosservices** project is a distributed backend application built entirely on a modern **Spring Boot & Spring Cloud** technology stack. The system is designed to provide core functionalities—such as managing customers, evaluating fraudulent behaviors, and handling messaging workflows—by decomposing responsibilities into isolated, independently deployable microservices. 
+---
 
-It heavily leverages a hybrid communication style, utilizing synchronous REST calls for critical path validations and asynchronous event-driven queues for non-blocking secondary processes.
+## Executive Summary
 
-## Architecture Description
+Amigosservices is a production-ready microservices reference architecture demonstrating modern distributed system patterns. Built on **Spring Boot 2.5.7** and **Spring Cloud 2020.0.3**, it showcases:
 
-The architecture follows a classical **Microservices** and **Event-Driven** approach. 
+- **Synchronous** service-to-service communication via OpenFeign
+- **Asynchronous** event-driven architecture via RabbitMQ
+- **Service discovery** and client-side load balancing via Netflix Eureka
+- **Distributed tracing** via Zipkin
+- **API Gateway** pattern for unified ingress
+- **Database-per-service** pattern with PostgreSQL
 
-- **Layered Topology**: A dedicated API Gateway acts as the entry interface, shielding internal services from clients.
-- **Hybrid Communication**:
-  - **Synchronous (REST)** is primarily conducted edge-to-service (via Gateway) or service-to-service when immediate validation is strictly required (e.g., verifying fraud during registration). Service locations are abstracted away using Service Discovery (Eureka Server) and called using declarative REST clients (`OpenFeign`).
-  - **Asynchronous (AMQP)** is handled by a RabbitMQ message broker. It enables loosely coupled background processing that improves performance and reliability (e.g., dispatching notifications asynchronously).
-- **Decentralized Data Management**: Each core microservice commands its own database schema (`customer`, `fraud`, `notification`), avoiding coupling at the data store level.
+This architecture serves as a blueprint for building scalable, resilient, and observable microservices on the JVM.
 
-## Architecture Diagram
+---
+
+## Architecture Overview
+
+### System Topology
 
 ```mermaid
-graph TD
-    Client(["Client (Web/Mobile Apps)"]) -->|REST| APIGW("API Gateway")
+graph TB
+    Client(["Client Applications<br/>Web/Mobile/Third-party"]) -->|HTTPS/HTTP| APIGW
     
-    subgraph Infrastructure
-        Eureka("Service Discovery<br/>(Eureka)") -.->|Register/Discover| APIGW
-        Eureka -.->|Register/Discover| Customer
-        Eureka -.->|Register/Discover| Fraud
-        Eureka -.->|Register/Discover| Notification
-        Zipkin("Distributed Tracing<br/>(Zipkin)")
+    subgraph "Infrastructure Layer"
+        Eureka["Service Discovery<br/>(Eureka Server)<br/>Port: 8761"]
+        Zipkin["Distributed Tracing<br/>(Zipkin)<br/>Port: 9411"]
+        RabbitMQ["Message Broker<br/>(RabbitMQ)<br/>Port: 5672/15672"]
+        Postgres[("PostgreSQL<br/>Port: 5432")]
     end
-
-    subgraph Core Services
-        APIGW -->|REST Forward| Customer("Customer Service")
-        Customer <-->|Synchronous REST<br/>via Feign Client| Fraud("Fraud Service")
-        Customer -->|Publish Async Msg| AMQP{"Message Broker<br/>(RabbitMQ)"}
-        AMQP -.->|Consume Async Msg| Notification("Notification Service")
+    
+    subgraph "Application Layer"
+        APIGW["API Gateway<br/>(Spring Cloud Gateway)<br/>Port: 8083"]
+        
+        subgraph "Core Services"
+            Customer["Customer Service<br/>Port: 8080"]
+            Fraud["Fraud Service<br/>Port: 8081"]
+            Notification["Notification Service<br/>Port: 8082"]
+        end
+        
+        subgraph "Shared Libraries"
+            Clients["clients<br/>(OpenFeign clients)"]
+            AMQP["amqp<br/>(RabbitMQ config)"]
+        end
     end
+    
+    subgraph "Data Layer"
+        DB_Cust[("customer<br/>schema")]
+        DB_Fraud[("fraud<br/>schema")]
+        DB_Notif[("notification<br/>schema")]
+    end
+    
+    %% Client connections
+    APIGW -->|Route| Customer
+    
+    %% Service Discovery
+    APIGW -.->|Register/Heartbeat| Eureka
+    Customer -.->|Register/Heartbeat| Eureka
+    Fraud -.->|Register/Heartbeat| Eureka
+    Notification -.->|Register/Heartbeat| Eureka
+    
+    %% Inter-service communication
+    Customer <-->|"OpenFeign<br/>Synchronous"| Fraud
+    Customer -->|"Publish Event<br/>Async"| RabbitMQ
+    RabbitMQ -->|"Consume Event<br/>Async"| Notification
+    
+    %% Database connections
+    Customer --> DB_Cust
+    Fraud --> DB_Fraud
+    Notification --> DB_Notif
+    
+    %% Observability
+    APIGW -.->|Trace| Zipkin
+    Customer -.->|Trace| Zipkin
+    Fraud -.->|Trace| Zipkin
+    Notification -.->|Trace| Zipkin
+    
+    %% Library dependencies
+    Customer -.->|Uses| Clients
+    Customer -.->|Uses| AMQP
+    Notification -.->|Uses| AMQP
+```
 
-    subgraph Databases
-        Customer --> DB_Cust[("Customer DB")]
-        Fraud --> DB_Fraud[("Fraud DB")]
-        Notification --> DB_Notif[("Notification DB")]
+### Key Design Principles
+
+| Principle | Implementation |
+|-----------|---------------|
+| **Single Responsibility** | Each service owns one business capability |
+| ** loose Coupling** | Async messaging via RabbitMQ; sync via service discovery |
+| **High Cohesion** | Related functionality colocated within services |
+| **Fault Isolation** | Circuit breaker patterns; async decoupling |
+| **Observability** | Distributed tracing; centralized logging ready |
+
+---
+
+## Component Breakdown
+
+### Infrastructure Components
+
+| Component | Technology | Purpose | Port |
+|-----------|-----------|---------|------|
+| **API Gateway** | Spring Cloud Gateway | Single entry point; routing; cross-cutting concerns | 8083 |
+| **Service Discovery** | Netflix Eureka | Dynamic service registration and discovery | 8761 |
+| **Message Broker** | RabbitMQ | Async event distribution; decoupling | 5672 (AMQP), 15672 (Management) |
+| **Distributed Tracing** | Zipkin | Request tracing across services | 9411 |
+| **Database** | PostgreSQL | Persistent storage (schema-per-service) | 5432 |
+
+### Core Services
+
+| Service | Responsibility | Key Dependencies |
+|---------|---------------|------------------|
+| **Customer Service** | Customer registration; orchestrates onboarding workflow | Fraud Service (sync), RabbitMQ (async) |
+| **Fraud Service** | Fraud risk assessment; maintains audit history | Database only |
+| **Notification Service** | Message dispatching; AMQP consumer | RabbitMQ (consumer), Database |
+
+### Shared Libraries
+
+| Library | Purpose | Consumers |
+|---------|---------|-----------|
+| **clients** | OpenFeign client interfaces for inter-service calls | Customer Service |
+| **amqp** | RabbitMQ configuration, exchanges, queues | Customer Service, Notification Service |
+
+---
+
+## Data Flow
+
+### Primary Flow: Customer Registration
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant G as API Gateway
+    participant CS as Customer Service
+    participant FS as Fraud Service
+    participant R as RabbitMQ
+    participant NS as Notification Service
+    participant DB as PostgreSQL
+    participant Z as Zipkin
+
+    Note over C,Z: All requests carry trace context
+    
+    C->>G: POST /api/v1/customers
+    G->>CS: Route to Customer Service
+    
+    rect rgb(230, 245, 255)
+        Note over CS: Transaction Begins
+        CS->>DB: INSERT customer record
+        CS->>FS: GET /api/v1/fraud-check/{id}
+        FS->>DB: INSERT fraud_check_history
+        FS-->>CS: { "isFraudster": false }
+    end
+    
+    alt Fraudster Detected
+        FS-->>CS: { "isFraudster": true }
+        CS-->>G: 500 Internal Server Error
+        G-->>C: Error: "fraudster"
+    else Legitimate Customer
+        CS->>R: Publish to internal.exchange
+        Note right of R: Event: notification.send
+        CS-->>G: 200 OK
+        G-->>C: Success
+        
+        R->>NS: Consume message
+        NS->>DB: INSERT notification record
+        Note over NS: Send actual notification<br/>(email/SMS/push)
     end
 ```
 
-## Key Components Explanation
+### Flow Characteristics
 
-1. **API Gateway (`apigw`)**: The singular entry point into the system. It abstracts backend complexity and provides centralized policy enforcement, routing external API requests to appropriate internal microservices based on paths.
-2. **Service Discovery (`eureka-server`)**: Tracks the network locations of available microservice instances. This eliminates the need for hardcoded IP addresses, allowing for seamless horizontal scaling.
-3. **Customer Service (`customer`)**: The core domain service. It manages customer profile creation and handles the primary business orchestration when a user onboard to the platform.
-4. **Fraud Service (`fraud`)**: Isolates the domain responsibility of analyzing users and assessing them for fraudulent flags. Retains historical auditing records of all fraud checks.
-5. **Notification Service (`notification`)**: The messaging domain. It listens to RabbitMQ queues in the background and is responsible for dispatching communications (e.g., emails/SMS messages) out to customers based on system triggers.
-6. **RabbitMQ**: Enterprise message broker that decouples services. It maintains the message queues to buffer notifications produced by the `customer` service until `notification` is ready to consume them.
-7. **Zipkin / Tracing**: An observability component that visualizes request traces traversing through microservices. Very useful to diagnose latencies and connection issues.
+| Aspect | Implementation |
+|--------|---------------|
+| **Synchronous Block** | Customer creation + Fraud check (blocking) |
+| **Asynchronous Handoff** | Notification dispatch (non-blocking) |
+| **Transaction Scope** | Customer DB write; no distributed transaction |
+| **Compensation** | None implemented; fraud check prevents notification |
+| **Eventual Consistency** | Notification delivery is eventually consistent |
 
-## Data Flow Example: Customer Registration
+---
 
-This is the primary workflow showcasing the orchestration between sync and async processes:
+## Communication Patterns
 
-1. **Ingress**: The Client sends a `POST /api/v1/customers` request.
-2. **Gateway**: The **API Gateway** intercepts the request, maps the route to the **Customer Service**, asks **Eureka** for an available Customer instance's IP, and routes the traffic.
-3. **Persistence**: **Customer Service** creates a prospective user record and immediately persists the data down into its local **Customer Database**. 
-4. **Synchronous Validation**: The **Customer Service** blocks the transaction and reaches out to the **Fraud Service** (using its Feign client capability) to evaluate the new user identity. 
-5. **Evaluation**: **Fraud Service** performs its internal checks, saves an audit trail to the **Fraud Database**, and responds `false` (not a fraudster) back over the wire.
-6. **Asynchronous Hand-off**: Knowing the customer is legitimate, the **Customer Service** publishes a `NotificationRequest` message to the `internal.exchange` inside **RabbitMQ** to welcome the user.
-7. **Egress**: The **Customer Service** acknowledges success back to the Gateway, which returns `200 OK` to the Client.
-8. **Worker Consumption**: In parallel, the **Notification Service** picks up the queued message from **RabbitMQ**, constructs the welcome template, sends it, and securely logs the notification record in the **Notification Database**.
+### Synchronous Communication (REST)
 
-## Scalability and Fault Tolerance
+```
+┌─────────────────┐         ┌─────────────────┐
+│ Customer Service│ ──────> │  Fraud Service  │
+│   (Feign Client)│ <────── │  (REST Endpoint)│
+└─────────────────┘  HTTP   └─────────────────┘
+       │                           │
+       └────── Eureka Lookup ──────┘
+```
 
-- **Client-Side Load Balancing**: Synchronous internal calls made over Feign clients are inherently load-balanced. If three `fraud` service instances are active, requests from `customer` are balanced between them sequentially.
-- **Dynamic Auto-Scaling**: Thanks to **Eureka**, any failing services that crash are deregistered, keeping traffic away from broken containers. New instances spun up will automatically wire themselves into the ecosystem.
-- **Fault Tolerance via Async**: Using **RabbitMQ** provides buffering. If the **Notification Service** experiences an outage or a spike, the API response given to the registering user isn't delayed. The messages simply sit safely in the queue until the service scales to process them. 
-- **Tracing**: Implementing **Zipkin** ensures that timeouts and circular failures can be correlated under a single Trace ID, providing deep traceability across a decoupled application context.
+**Characteristics:**
+- **Protocol**: HTTP/1.1 via OpenFeign
+- **Discovery**: Client-side load balancing via Eureka
+- **Timeout**: Default Feign timeouts apply
+- **Retry**: No automatic retry configured
+- **Circuit Breaker**: Not implemented (potential enhancement)
+
+### Asynchronous Communication (AMQP)
+
+```
+┌─────────────────┐    Publish     ┌─────────────┐    Consume    ┌─────────────────┐
+│ Customer Service│ ─────────────> │internal.    │ ────────────> │Notification     │
+│                 │                │  exchange   │               │    Service      │
+└─────────────────┘                └─────────────┘               └─────────────────┘
+```
+
+**Exchange Configuration:**
+- **Exchange Name**: `internal.exchange`
+- **Type**: Topic (configurable)
+- **Routing Key**: `internal.notification.routing-key`
+- **Queue**: `internal.notification`
+- **Durability**: Durable exchange and queue
+
+---
+
+## Data Management
+
+### Database Architecture
+
+| Service | Schema | Tables |
+|---------|--------|--------|
+| Customer | `customer` | `customer` |
+| Fraud | `fraud` | `fraud_check_history` |
+| Notification | `notification` | `notification` |
+
+### Data Consistency Model
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Customer Registration                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │   Customer   │  │    Fraud     │  │ Notification │       │
+│  │   Record     │  │   Check      │  │   Event      │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
+│         │                │                │                 │
+│         ▼                ▼                ▼                 │
+│    Strong Consistency  Sync Validation  Eventual            │
+│    (Immediate)         (Blocking)       Consistency         │
+│                                         (Async)             │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Observability
+
+### Distributed Tracing
+
+Zipkin traces capture the following spans:
+
+1. **API Gateway** → Incoming request
+2. **Customer Service** → Processing
+3. **Customer Service** → Database operation
+4. **Customer Service** → Fraud Service call (Feign)
+5. **Fraud Service** → Processing
+6. **Fraud Service** → Database operation
+7. **RabbitMQ** → Message publish (if success)
+
+### Health Endpoints
+
+All services expose Spring Boot Actuator health endpoints:
+
+```
+GET /actuator/health          # Overall health
+GET /actuator/health/liveness  # Kubernetes liveness probe
+GET /actuator/health/readiness # Kubernetes readiness probe
+```
+
+---
+
+## Deployment Architecture
+
+### Docker Compose Topology
+
+```yaml
+# Infrastructure (Start First)
+- postgres       # Database with 3 schemas
+- rabbitmq       # Message broker
+- zipkin         # Tracing server
+
+# Services (Start in Order)
+- eureka-server  # Must be healthy first
+- apigw          # Depends on eureka
+- fraud          # Depends on postgres
+- customer       # Depends on postgres, rabbitmq, eureka
+- notification   # Depends on postgres, rabbitmq
+```
+
+### Spring Profiles
+
+| Profile | Purpose | Configuration |
+|---------|---------|---------------|
+| `default` | Local IDE development | `localhost` URLs |
+| `docker` | Containerized deployment | Service names as hosts |
+| `kube` | Kubernetes deployment | ConfigMaps/Secrets ready |
+
+---
+
+## Scalability & Fault Tolerance
+
+### Horizontal Scaling
+
+| Component | Stateless? | Scaling Mechanism |
+|-----------|-----------|-------------------|
+| API Gateway | ✅ Yes | Multiple instances behind LB |
+| Customer Service | ✅ Yes | Register multiple instances with Eureka |
+| Fraud Service | ✅ Yes | Register multiple instances with Eureka |
+| Notification Service | ✅ Yes | Competing consumer pattern |
+| Eureka Server | ⚠️ Clustered | Peer-to-peer replication |
+| RabbitMQ | ⚠️ Clustered | Mirrored queues |
+| PostgreSQL | ❌ No | Primary-replica (not configured) |
+
+### Fault Tolerance Patterns
+
+| Pattern | Implementation | Status |
+|---------|---------------|--------|
+| **Client-Side Load Balancing** | Netflix Ribbon (via Feign) | ✅ Implemented |
+| **Service Discovery** | Netflix Eureka | ✅ Implemented |
+| **Async Decoupling** | RabbitMQ | ✅ Implemented |
+| **Circuit Breaker** | Resilience4j | ⚠️ Not implemented |
+| **Retry with Backoff** | Spring Retry | ⚠️ Not implemented |
+| **Rate Limiting** | Gateway filters | ⚠️ Not implemented |
+
+---
+
+## Future Enhancements
+
+1. **Resilience Patterns**: Implement circuit breakers (Resilience4j) for fraud service calls
+2. **API Versioning**: Add versioning strategy to API Gateway routes
+3. **Authentication**: Integrate OAuth2/JWT at API Gateway level
+4. **Rate Limiting**: Implement request throttling per client
+5. **Event Sourcing**: Consider event sourcing for customer lifecycle
+6. **Saga Pattern**: Implement proper distributed transaction compensation
+7. **Caching**: Add Redis for frequently accessed fraud check results
+8. **Monitoring**: Integrate Prometheus/Grafana for metrics
