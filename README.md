@@ -64,14 +64,14 @@ You can optionally spin up the entirety of the architecture including databases 
    *(Alternatively, run the bash executable if configured: `./build-and-run.sh`)*
 3. Spin up the cluster:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 ### Local Development (Manual Services)
 If modifying code directly, run the infrastructure dependencies detached, then start apps via IDE:
 1. Start required backing persistence maps:
    ```bash
-   docker-compose up -d postgres pgadmin zipkin rabbitmq
+   docker compose up -d postgres pgadmin zipkin rabbitmq
    ```
 2. Run microservices manually from your IDE or terminal prioritizing this boot order: 
    - `EurekaServerApplication` (Wait for startup)
