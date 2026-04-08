@@ -16,28 +16,24 @@ public class CustomerService {
     private final FraudClient fraudClient;
     private final RabbitMQMessageProducer rabbitMQMessageProducer;
 
-    public void registerCustomer(CustomerRegistrationRequest request) {
+    public void registerCustomer(
+            CustomerRegistrationRequest request
+    ) {
         Customer customer = Customer.builder()
                 .firstName(request.firstName())
                 .lastName(request.lastName())
                 .email(request.email())
                 .build();
-        // todo: check if email valid
-        // todo: check if email not taken
-        customerRepository.saveAndFlush(customer);
+        customerRepository.saveAndFlush(customer); // Dữ liệu 'customer' được đẩy xuống db ngay tức thì // todo: check if email valid / email not taken
 
         FraudCheckResponse fraudCheckResponse =
                 fraudClient.isFraudster(customer.getId());
-
-        if (fraudCheckResponse.isFraudster()) {
-            throw new IllegalStateException("fraudster");
-        }
+        if (fraudCheckResponse.isFraudster()) { throw new IllegalStateException("fraudster"); }
 
         NotificationRequest notificationRequest = new NotificationRequest(
                 customer.getId(),
                 customer.getEmail(),
-                String.format("Hi %s, welcome to Amigoscode...",
-                        customer.getFirstName())
+                String.format("Hi %s, welcome to Amigoscode...", customer.getFirstName())
         );
         rabbitMQMessageProducer.publish(
                 notificationRequest,
