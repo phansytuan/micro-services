@@ -13,29 +13,29 @@ We use a **hybrid development approach**:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Your Machine                             │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │                  IDE (IntelliJ/Eclipse)               │  │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────────┐   │  │
-│  │  │ Customer│ │  Fraud  │ │Notification│ │ API GW  │   │  │
-│  │  │ Service │ │ Service │ │  Service   │         │   │  │
-│  │  │ (8080)  │ │ (8081)  │ │  (8082)    │ (8083)  │   │  │
-│  │  └────┬────┘ └────┬────┘ └─────┬──────┘ └────┬────┘   │  │
-│  │       │            │            │             │         │  │
-│  │       └────────────┴────────────┴─────────────┘         │  │
-│  │                    Spring Boot DevTools                  │  │
-│  │              (Auto-restart on code changes)              │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                              │                               │
-│                              ▼                               │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │                   Docker Containers                   │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐            │  │
-│  │  │PostgreSQL│  │ RabbitMQ │  │  Zipkin  │            │  │
-│  │  │  (5432)  │  │(5672/    │  │  (9411)  │            │  │
-│  │  │          │  │ 15672)   │  │          │            │  │
-│  │  └──────────┘  └──────────┘  └──────────┘            │  │
-│  └──────────────────────────────────────────────────────┘  │
+│                     Your Machine                            │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │                  IDE (IntelliJ/Eclipse)              │   │
+│  │  ┌─────────┐ ┌──────────┐ ┌────────────┐ ┌─────────┐ │   │
+│  │  │ Customer│ │  Fraud   │ │Notification│ │ API GW  │ │   │
+│  │  │ Service │ │ Service  │ │  Service   │ │         │ │   │
+│  │  │ (8080)  │ │  (8081)  │ │  (8082)    │ │ (8083)  │ │   │
+│  │  └────┬────┘ └─────┬────┘ └─────┬──────┘ └────┬────┘ │   │
+│  │       │            │            │             │      │   │
+│  │       └────────────┴────────────┴─────────────┘      │   │
+│  │                    Spring Boot DevTools              │   │
+│  │              (Auto-restart on code changes)          │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                              │                              │
+│                              ▼                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │                   Docker Containers                  │   │
+│  │   ┌──────────┐    ┌──────────┐    ┌──────────┐       │   │
+│  │   │PostgreSQL│    │ RabbitMQ │    │  Zipkin  │       │   │
+│  │   │  (5432)  │    │  (5672/  │    │  (9411)  │       │   │
+│  │   │          │    │  15672)  │    │          │       │   │
+│  │   └──────────┘    └──────────┘    └──────────┘       │   │
+│  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -59,10 +59,10 @@ We use a **hybrid development approach**:
 ```
 
 This command:
-- Starts PostgreSQL, RabbitMQ, Zipkin, and pgAdmin
+- Starts PostgreSQL, RabbitMQ, Zipkin, & pgAdmin
 - Waits for PostgreSQL to be healthy
-- Creates the three application databases: `customer`, `fraud`, `notification`
-- Verifies RabbitMQ and Zipkin are ready
+- Creates the 3 application databases: `customer`, `fraud`, `notification`
+- Verifies RabbitMQ & Zipkin are ready
 
 **Expected output:**
 ```
@@ -74,8 +74,8 @@ Services:
   🐘 PostgreSQL    : localhost:5432 (amigoscode/password)
   🐰 RabbitMQ AMQP : localhost:5672
   🐰 RabbitMQ Mgmt : http://localhost:15672 (guest/guest)
-  📊 Zipkin        : http://localhost:9411
-  🗄️  pgAdmin       : http://localhost:5050
+  📊  Zipkin       : http://localhost:9411
+  🗄️  pgAdmin      : http://localhost:5050
 ```
 
 ### 2. Import Project into IDE
@@ -87,7 +87,7 @@ Services:
 
 **VS Code:**
 1. File → Open Folder → Select project root
-2. Install "Extension Pack for Java" and "Spring Boot Extension Pack"
+2. Install "Extension Pack for Java" & "Spring Boot Extension Pack"
 
 ### 3. Start Services in Order
 
@@ -123,7 +123,7 @@ Services:
 
 ### What Gets Auto-Restarted
 
-Spring Boot DevTools monitors the classpath for changes and automatically restarts the application when it detects:
+Spring Boot DevTools monitors the classpath for changes & automatically restarts the application when it detects:
 
 | Change Type | Restarts? | Notes |
 |-------------|-----------|-------|
@@ -243,7 +243,7 @@ The services use JPA/Hibernate with `ddl-auto: create-drop` by default, so:
 **Web UI:** http://localhost:15672 (guest/guest)
 
 **Useful views:**
-- **Queues**: See message backlog and consumer count
+- **Queues**: See message backlog & consumer count
 - **Exchanges**: View `internal.exchange` bindings
 - **Channels**: Monitor active connections
 
@@ -331,12 +331,12 @@ open http://localhost:15672
 
 ### Service Won't Start
 
-**Symptom:** `Connection refused` or `Cannot execute request on any known server`
+**Symptom:** `Connection refused` / `Cannot execute request on any known server`
 
 **Solutions:**
 1. **Eureka not ready**: Start EurekaServerApplication first
-2. **Database not ready**: Run `./start-infra.sh` and wait for completion
-3. **Port already in use**: Check with `lsof -i :8080` and kill process
+2. **Database not ready**: Run `./start-infra.sh` & wait for completion
+3. **Port already in use**: Check with `lsof -i :8080` & kill process
 
 ### Database Connection Errors
 
