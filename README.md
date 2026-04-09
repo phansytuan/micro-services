@@ -158,7 +158,7 @@ Verify installation:
 java -version        # Should show Java 17
 mvn -version         # Should show Maven 3.8+
 docker --version     # Should show Docker 20.10+
-docker-compose --version
+docker compose version
 ```
 
 ### Quick Start (Docker)
@@ -192,19 +192,21 @@ This script will:
 | RabbitMQ Management | http://localhost:15672 (guest/guest) |
 | pgAdmin | http://localhost:5050 (pgadmin4@pgadmin.org/admin) |
 
-### Local Development
+### Local Development (Recommended)
 
-For active development with hot-reload:
+For active development with **hot-reload** via Spring Boot DevTools:
 
 **Step 1: Start Infrastructure**
 
 ```bash
-docker-compose up -d postgres rabbitmq zipkin
+./start-infra.sh
 ```
+
+This starts PostgreSQL, RabbitMQ, Zipkin, and pgAdmin, and creates the required databases.
 
 **Step 2: Start Services (in order)**
 
-From your IDE or terminal, start the Spring Boot applications in this sequence:
+From your IDE, run the Spring Boot applications:
 
 1. **EurekaServerApplication** (wait for "Started EurekaServerApplication")
 2. **ApiGWApplication**
@@ -214,7 +216,16 @@ From your IDE or terminal, start the Spring Boot applications in this sequence:
 
 > ⚠️ **Important**: Service startup order matters. Services will fail to start if Eureka is not available.
 
-**Step 3: Verify**
+**Step 3: Develop with Hot Reload**
+
+With Spring Boot DevTools enabled, any code changes will automatically restart the affected service in **2-3 seconds**:
+
+- ✅ Modify controller logic → Auto-restart
+- ✅ Change service implementation → Auto-restart
+- ✅ Update configuration → Auto-restart
+- ✅ Full IDE debugger support with breakpoints
+
+**Step 4: Verify**
 
 ```bash
 # Check Eureka for registered services
@@ -222,6 +233,12 @@ curl http://localhost:8761/eureka/apps
 
 # Check Customer Service health
 curl http://localhost:8080/actuator/health
+```
+
+**Stop Infrastructure**
+
+```bash
+docker compose -f docker-compose.infra.yml down
 ```
 
 ---
@@ -393,7 +410,7 @@ Set profile:
 # Docker deployment
 export SPRING_PROFILES_ACTIVE=docker
 
-# Or via docker-compose
+# Or via docker compose
 environment:
   - SPRING_PROFILES_ACTIVE=docker
 ```
@@ -433,8 +450,8 @@ curl http://localhost:8761/actuator/health
 
 **Solution**: Ensure PostgreSQL container is healthy:
 ```bash
-docker-compose ps
-docker-compose logs postgres
+docker compose ps
+docker compose logs postgres
 ```
 
 ### RabbitMQ connection errors
@@ -443,7 +460,7 @@ docker-compose logs postgres
 
 **Solution**: Verify RabbitMQ is running:
 ```bash
-docker-compose ps rabbitmq
+docker compose ps rabbitmq
 curl http://localhost:15672
 ```
 

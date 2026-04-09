@@ -375,7 +375,7 @@ All errors follow RFC 7807-inspired structure:
 
 ```bash
 # 1. Start infrastructure
-docker-compose up -d postgres rabbitmq zipkin
+docker compose up -d postgres rabbitmq zipkin
 
 # 2. Start services in order:
 #    EurekaServerApplication → ApiGWApplication → FraudApplication → CustomerApplication → NotificationApplication
