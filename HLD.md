@@ -197,8 +197,8 @@ sequenceDiagram
 
 ```
 ┌─────────────────┐         ┌─────────────────┐
-│ Customer Service│ ──────> │  Fraud Service  │
-│   (Feign Client)│ <────── │  (REST Endpoint)│
+│Customer Service │ ──────> │ Fraud Service   │
+│  (Feign Client) │ <────── │ (REST Endpoint) │
 └─────────────────┘  HTTP   └─────────────────┘
        │                           │
        └────── Eureka Lookup ──────┘
@@ -214,10 +214,10 @@ sequenceDiagram
 ### Asynchronous Communication (AMQP)
 
 ```
-┌─────────────────┐    Publish     ┌─────────────┐    Consume    ┌─────────────────┐
-│ Customer Service│ ─────────────> │internal.    │ ────────────> │Notification     │
-│                 │                │  exchange   │               │    Service      │
-└─────────────────┘                └─────────────┘               └─────────────────┘
+┌──────────────────┐    Publish     ┌─────────────┐    Consume    ┌─────────────────┐
+│ Customer Service │ ─────────────> │  internal.  │ ────────────> │  Notification   │
+│                  │                │   exchange  │               │    Service      │
+└──────────────────┘                └─────────────┘               └─────────────────┘
 ```
 
 **Exchange Configuration:**
@@ -243,19 +243,19 @@ sequenceDiagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     Customer Registration                    │
+│                     Customer Registration                   │
 ├─────────────────────────────────────────────────────────────┤
-│                                                              │
+│                                                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
 │  │   Customer   │  │    Fraud     │  │ Notification │       │
-│  │   Record     │  │   Check      │  │   Event      │       │
+│  │   Record     │  │    Check     │  │   Event      │       │
 │  └──────────────┘  └──────────────┘  └──────────────┘       │
 │         │                │                │                 │
 │         ▼                ▼                ▼                 │
 │    Strong Consistency  Sync Validation  Eventual            │
 │    (Immediate)         (Blocking)       Consistency         │
 │                                         (Async)             │
-│                                                              │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
