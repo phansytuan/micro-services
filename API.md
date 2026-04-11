@@ -1,49 +1,32 @@
 # Amigosservices API Reference
 
-## Overview
-
-This document provides comprehensive API specifications for the Amigosservices microservices platform. All external traffic flows through the **API Gateway** (port 8083).
+Complete API documentation for the microservices platform.
 
 **Base URL:** `http://localhost:8083`  
-**Content-Type:** `application/json`  
-**Version:** 1.0
+**Content-Type:** `application/json`
 
 ---
 
 ## Quick Reference
 
-| Endpoint | Method | Service | Description |
-|----------|--------|---------|-------------|
-| `/api/v1/customers` | POST | Customer | Register new customer |
-| `/api/v1/fraud-check/{customerId}` | GET | Fraud | Check fraud status |
-| `/api/v1/notification` | POST | Notification | Send notification |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/customers` | POST | Register new customer |
+| `/api/v1/fraud-check/{customerId}` | GET | Check fraud status |
+| `/api/v1/notification` | POST | Send notification (testing) |
 
 ---
 
-## 1. Customer API
+## 1. Register Customer
 
-### 1.1 Register Customer
+Creates a new customer with fraud validation and async notification.
 
-Creates a new customer account with integrated fraud validation and async notification.
-
-**Endpoint:** `POST /api/v1/customers`
-
-#### Request
-
-**Headers:**
-```
-Content-Type: application/json
+```http
+POST /api/v1/customers
 ```
 
-**Request Body:**
+### Request Body
 
-| Field | Type | Required | Constraints | Description |
-|-------|------|----------|-------------|-------------|
-| `firstName` | string | Yes | 1-100 chars | Customer first name |
-| `lastName` | string | Yes | 1-100 chars | Customer last name |
-| `email` | string | Yes | Valid email format | Unique email address |
-
-**Example Request:**
 ```json
 {
   "firstName": "Jane",
@@ -52,47 +35,36 @@ Content-Type: application/json
 }
 ```
 
-#### Response
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `firstName` | string | Yes | Customer first name |
+| `lastName` | string | Yes | Customer last name |
+| `email` | string | Yes | Valid email address |
 
-**Success Response (200 OK):**
+### Responses
 
-Returns empty body on success. The response is immediate after:
-- Customer record persisted
-- Fraud check passed (synchronous)
-- Notification event published (asynchronous)
+**Success (200 OK)**
+- Empty response body
+- Customer created in database
+- Fraud check passed
+- Notification queued (async)
 
-**Error Responses:**
-
-| Status | Error Code | Description |
-|--------|-----------|-------------|
-| 400 | `VALIDATION_ERROR` | Invalid request body (malformed JSON or missing fields) |
-| 409 | `CONFLICT` | Email already registered |
-| 422 | `FRAUD_DETECTED` | Customer flagged as fraudster by Fraud Service |
-| 500 | `INTERNAL_ERROR` | Unexpected server error |
-| 503 | `SERVICE_UNAVAILABLE` | Fraud Service unavailable |
-
-**Example Error Response (422):**
+**Error (500 Internal Server Error)**
 ```json
 {
   "timestamp": "2026-04-08T10:30:00.000+00:00",
-  "status": 422,
-  "error": "Unprocessable Entity",
-  "message": "Customer registration rejected: fraudster",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "fraudster",
   "path": "/api/v1/customers"
 }
 ```
+This means the customer was flagged as fraudulent.
 
-#### Business Rules
-
-1. **Email Uniqueness**: Email must be unique across the system
-2. **Fraud Validation**: Synchronous blocking call to Fraud Service
-3. **Notification**: Async message published to RabbitMQ on success
-4. **Transaction**: Customer record created regardless of notification delivery
-
-#### Example Usage
+### Example Usage
 
 ```bash
-# Successful registration
+# Register a customer
 curl -X POST http://localhost:8083/api/v1/customers \
   -H "Content-Type: application/json" \
   -d '{
@@ -114,141 +86,91 @@ curl -X POST http://localhost:8083/api/v1/customers \
     "email": "suspicious@example.com"
   }'
 
-# Response: 422 Unprocessable Entity
-# Body: {"timestamp":"...","status":422,"error":"Unprocessable Entity","message":"fraudster","path":"/api/v1/customers"}
+# Response: 500 Internal Server Error
+# Body: {"message":"fraudster", ...}
 ```
+
+### What Happens
+
+1. **Saves customer** to PostgreSQL
+2. **Calls Fraud Service** via HTTP (blocking)
+3. **Publishes event** to RabbitMQ (non-blocking, async)
+4. **Returns 200** immediately on success
 
 ---
 
-## 2. Fraud API
+## 2. Check Fraud Status
 
-### 2.1 Check Fraud Status
+Checks if a customer is flagged as fraudulent.
 
-Evaluates whether a customer is flagged as fraudulent. Primarily consumed internally by Customer Service.
+```http
+GET /api/v1/fraud-check/{customerId}
+```
 
-**Endpoint:** `GET /api/v1/fraud-check/{customerId}`
-
-#### Request
-
-**Path Parameters:**
+### Path Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `customerId` | integer | Yes | Unique customer identifier |
+| `customerId` | integer | Yes | Customer ID to check |
 
-#### Response
+### Response
 
-**Success Response (200 OK):**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `isFraudster` | boolean | `true` if customer is flagged, `false` otherwise |
-
-**Example Response:**
+**Success (200 OK)**
 ```json
 {
   "isFraudster": false
 }
 ```
 
-**Error Responses:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `isFraudster` | boolean | `true` if fraudulent, `false` otherwise |
 
-| Status | Error Code | Description |
-|--------|-----------|-------------|
-| 400 | `BAD_REQUEST` | Invalid customerId format (non-integer) |
-| 404 | `NOT_FOUND` | Customer ID not found in system |
-
-#### Business Rules
-
-1. **Audit Trail**: Every check is logged to `fraud_check_history` table
-2. **Deterministic**: Currently uses simple heuristics (e.g., email domain patterns)
-3. **Read-Only**: This endpoint doesn't modify fraud status
-
-#### Example Usage
+### Example Usage
 
 ```bash
-# Check legitimate customer
+# Check customer 1
 curl http://localhost:8083/api/v1/fraud-check/1
 
-# Response:
-# {"isFraudster": false}
-```
-
-```bash
-# Check fraudster
-curl http://localhost:8083/api/v1/fraud-check/2
-
-# Response:
-# {"isFraudster": true}
+# Response: {"isFraudster": false}
 ```
 
 ---
 
-## 3. Notification API
+## 3. Send Notification
 
-### 3.1 Send Notification
+Sends a notification to a customer. Mainly used for testing; normally triggered via RabbitMQ.
 
-Dispatches a notification to a customer. Primarily invoked asynchronously via RabbitMQ; HTTP endpoint available for testing.
-
-**Endpoint:** `POST /api/v1/notification`
-
-#### Request
-
-**Headers:**
-```
-Content-Type: application/json
+```http
+POST /api/v1/notification
 ```
 
-**Request Body:**
+### Request Body
 
-| Field | Type | Required | Constraints | Description |
-|-------|------|----------|-------------|-------------|
-| `toCustomerId` | integer | Yes | Positive integer | Target customer ID |
-| `toCustomerName` | string | Yes | 1-200 chars | Customer name or identifier for display |
-| `message` | string | Yes | 1-1000 chars | Notification content |
-
-**Example Request:**
 ```json
 {
   "toCustomerId": 1,
   "toCustomerName": "Jane Doe",
-  "message": "Welcome to Amigosservices! Your registration is complete."
+  "message": "Welcome to Amigosservices!"
 }
 ```
 
-#### Response
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `toCustomerId` | integer | Yes | Target customer ID |
+| `toCustomerName` | string | Yes | Customer name for display |
+| `message` | string | Yes | Notification content |
 
-**Success Response (200 OK):**
+### Response
 
-Returns empty body. The notification is persisted and queued for delivery.
+**Success (200 OK)**
+- Empty response body
+- Notification saved to database
 
-**Error Responses:**
-
-| Status | Error Code | Description |
-|--------|-----------|-------------|
-| 400 | `VALIDATION_ERROR` | Invalid request body |
-| 404 | `CUSTOMER_NOT_FOUND` | Customer ID doesn't exist |
-| 500 | `INTERNAL_ERROR` | Failed to persist notification |
-
-#### Async Behavior
-
-When triggered via RabbitMQ (normal flow):
-
-1. Customer Service publishes event to `internal.exchange`
-2. Notification Service consumes from `internal.notification` queue
-3. Notification is persisted and dispatched
-4. Message acknowledged after successful processing
-
-**Queue Configuration:**
-- **Exchange**: `internal.exchange` (topic)
-- **Routing Key**: `internal.notification.routing-key`
-- **Queue**: `internal.notification`
-- **Durability**: Durable
-
-#### Example Usage
+### Example Usage
 
 ```bash
-# Direct HTTP call (testing only)
+# Send notification
 curl -X POST http://localhost:8083/api/v1/notification \
   -H "Content-Type: application/json" \
   -d '{
@@ -262,125 +184,47 @@ curl -X POST http://localhost:8083/api/v1/notification \
 
 ---
 
-## 4. Common Patterns
+## Asynchronous Flow
 
-### 4.1 Error Response Format
+When a customer registers successfully, this happens:
 
-All errors follow RFC 7807-inspired structure:
-
-```json
-{
-  "timestamp": "2026-04-08T10:30:00.000+00:00",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Validation failed for object='customerRegistrationRequest'",
-  "path": "/api/v1/customers",
-  "errors": [
-    {
-      "field": "email",
-      "message": "must be a well-formed email address"
-    }
-  ]
-}
+```
+Customer Service          RabbitMQ           Notification Service
+     │                       │                       │
+     │ ─────── Publish ─────>│                       │
+     │   exchange: internal    │                       │
+     │   routing: internal     │                       │
+     │                       │ ─────── Consume ─────>│
+     │                       │                       │ ─── Save to DB
+     │                       │                       │ ─── Send email
 ```
 
-### 4.2 HTTP Status Codes
+### Message Queue Configuration
 
-| Code | Usage |
-|------|-------|
-| 200 | Successful GET or POST with response body |
-| 201 | Resource created (future implementations) |
-| 204 | Successful POST without response body |
-| 400 | Malformed request or validation error |
-| 401 | Authentication required (future) |
-| 403 | Permission denied (future) |
-| 404 | Resource not found |
-| 409 | Resource conflict (e.g., duplicate email) |
-| 422 | Business rule violation (e.g., fraudster) |
-| 500 | Unexpected server error |
-| 503 | Service unavailable or timeout |
-
-### 4.3 Timeout Guidelines
-
-| Call Type | Timeout | Notes |
-|-----------|---------|-------|
-| Customer → Fraud | 5 seconds | Synchronous, blocks registration |
-| Gateway → Services | 30 seconds | Default Spring Cloud Gateway |
-| RabbitMQ Publish | 10 seconds | Async, non-blocking |
+- **Exchange:** `internal.exchange` (topic)
+- **Routing Key:** `internal.notification.routing-key`
+- **Queue:** `internal.notification`
 
 ---
 
-## 5. Architecture Context
+## Service Ports
 
-### Service Communication
+For direct access (bypassing API Gateway):
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         API Gateway                              │
-│                         (Port 8083)                              │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-          ┌───────────────────┼───────────────────┐
-          ▼                   ▼                   ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│    Customer     │  │     Fraud       │  │  Notification   │
-│    Service      │  │    Service      │  │    Service      │
-│   (Port 8080)   │  │   (Port 8081)   │  │   (Port 8082)   │
-└─────────────────┘  └─────────────────┘  └─────────────────┘
-          │                   │                   │
-          │                   ▼                   ▼
-          │           ┌─────────────────┐  ┌─────────────────┐
-          └──────────>│   PostgreSQL    │  │    RabbitMQ     │
-             (Feign)  │   (fraud DB)    │  │  (async queue)  │
-                      └─────────────────┘  └─────────────────┘
-                              ▲
-          ┌───────────────────┴───────────────────┐
-          ▼                                       ▼
-┌─────────────────┐                      ┌─────────────────┐
-│   PostgreSQL    │                      │   PostgreSQL    │
-│  (customer DB)  │                      │ (notification DB)│
-└─────────────────┘                      └─────────────────┘
-```
-
-### Request Flow: Customer Registration
-
-```
-1. Client ──POST /api/v1/customers──> API Gateway
-                                       │
-                                       ▼
-2.                            Customer Service
-                                       │
-                       ┌───────────────┴───────────────┐
-                       ▼                               ▼
-3.              PostgreSQL (save)            Fraud Service
-                       │                               │
-                       │                       PostgreSQL (log)
-                       │                               │
-                       └───────────┬───────────────────┘
-                                   ▼
-4.                         RabbitMQ (publish)
-                                   │
-                                   ▼
-5.                        Notification Service
-                                   │
-                                   ▼
-6.                        PostgreSQL (save)
-```
+| Service | Direct Port | Through Gateway |
+|---------|-------------|-----------------|
+| Customer | 8080 | `localhost:8083/api/v1/customers` |
+| Fraud | 8081 | `localhost:8083/api/v1/fraud-check/{id}` |
+| Notification | 8082 | `localhost:8083/api/v1/notification` |
 
 ---
 
-## 6. Testing & Development
+## Testing
 
-### Local Testing
+### Register and Verify
 
 ```bash
-# 1. Start infrastructure
-docker compose up -d postgres rabbitmq zipkin
-
-# 2. Start services in order:
-#    EurekaServerApplication → ApiGWApplication → FraudApplication → CustomerApplication → NotificationApplication
-
-# 3. Test customer registration
+# 1. Register a customer
 curl -X POST http://localhost:8083/api/v1/customers \
   -H "Content-Type: application/json" \
   -d '{
@@ -389,29 +233,54 @@ curl -X POST http://localhost:8083/api/v1/customers \
     "email": "test@example.com"
   }'
 
-# 4. Verify fraud check
+# 2. Check fraud status (customer ID is typically 1)
 curl http://localhost:8083/api/v1/fraud-check/1
 
-# 5. Check RabbitMQ management console
+# 3. Check RabbitMQ for messages
 open http://localhost:15672  # guest/guest
 ```
 
 ### Health Checks
 
-All services expose Actuator endpoints:
-
 ```bash
-# Check service health
-curl http://localhost:8080/actuator/health    # Customer
-curl http://localhost:8081/actuator/health    # Fraud
-curl http://localhost:8082/actuator/health    # Notification
-curl http://localhost:8761/actuator/health    # Eureka
+# Check all services
+curl http://localhost:8080/actuator/health  # Customer
+curl http://localhost:8081/actuator/health  # Fraud
+curl http://localhost:8082/actuator/health  # Notification
+curl http://localhost:8761/actuator/health  # Eureka
 ```
 
 ---
 
-## 7. Changelog
+## HTTP Status Codes
 
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.0 | 2026-04-08 | Initial API release |
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 400 | Bad request (validation error) |
+| 404 | Resource not found |
+| 500 | Internal server error (including "fraudster") |
+| 503 | Service unavailable |
+
+---
+
+## Architecture
+
+```
+┌─────────┐
+│ Client  │
+└────┬────┘
+     │ POST /api/v1/customers
+     ▼
+┌──────────────┐
+│ API Gateway  │
+└──────┬───────┘
+       │ Route to Customer Service
+       ▼
+┌──────────────────────────────────────┐
+│         Customer Service             │
+│  ├─ Save to PostgreSQL               │
+│  ├─ Call Fraud Service (HTTP/Feign)  │
+│  └─ Publish to RabbitMQ              │
+└──────────────────────────────────────┘
+```

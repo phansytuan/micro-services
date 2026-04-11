@@ -1,249 +1,116 @@
 # Amigosservices
 
-[![Build](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/amigoscode/microservices)
-[![Java](https://img.shields.io/badge/Java-17-orange)](https://adoptium.net/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.5.7-green)](https://spring.io/projects/spring-boot)
-[![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2020.0.3-blue)](https://spring.io/projects/spring-cloud)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Build](https://img.shields.io/badge/build-passing-brightgreen)]()
+[![Java](https://img.shields.io/badge/Java-17-orange)]()
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.5.7-green)]()
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)]()
 
-> A production-ready microservices reference architecture demonstrating distributed system patterns with Spring Cloud.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Quick Start (Docker)](#quick-start-docker)
-  - [Local Development](#local-development)
-- [API Usage](#api-usage)
-- [Testing](#testing)
-- [Monitoring](#monitoring)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
+A simple, production-ready microservices reference architecture using Spring Cloud.
 
 ---
 
-## Overview
+## What Is This?
 
-Amigosservices is a complete microservices ecosystem showcasing modern patterns for building scalable, resilient distributed systems on the JVM. It implements a customer onboarding flow with fraud detection and notification dispatching.
+Amigosservices demonstrates modern microservices patterns through a practical example: **customer registration with fraud detection**.
 
-### Key Features
+**The Flow:**
+1. Customer registers via API
+2. System checks for fraud (synchronous - must complete first)
+3. Welcome notification sent (asynchronous - happens in background)
 
-- ✅ **Service Discovery** — Netflix Eureka for dynamic service registration
-- ✅ **API Gateway** — Spring Cloud Gateway for unified ingress
-- ✅ **Synchronous Communication** — OpenFeign for inter-service REST calls
-- ✅ **Asynchronous Messaging** — RabbitMQ for event-driven architecture
-- ✅ **Distributed Tracing** — Zipkin for request correlation
-- ✅ **Database-per-Service** — PostgreSQL with isolated schemas
-- ✅ **Containerized Deployment** — Docker Compose for local development
-
-### Demo Flow
-
-```
-┌─────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Client │────>│ API Gateway  │────>│   Customer   │────>│    Fraud     │
-│         │     │   (8083)     │     │   Service    │     │   Service    │
-└─────────┘     └──────────────┘     └──────────────┘     └──────────────┘
-                                              │                   │
-                                              ▼                   ▼
-                                       ┌──────────────┐     ┌──────────────┐
-                                       │   PostgreSQL │     │   PostgreSQL │
-                                       │  (customer)  │     │   (fraud)    │
-                                       └──────────────┘     └──────────────┘
-                                              │
-                                              ▼
-                                       ┌──────────────┐
-                                       │   RabbitMQ   │
-                                       │(internal.ex) │
-                                       └──────────────┘
-                                              │
-                                              ▼
-                                       ┌──────────────┐
-                                       │ Notification │
-                                       │   Service    │
-                                       └──────────────┘
-```
+**Key Patterns Demonstrated:**
+- ✅ Service Discovery (Eureka)
+- ✅ API Gateway (Spring Cloud Gateway)
+- ✅ Synchronous Communication (OpenFeign/REST)
+- ✅ Asynchronous Messaging (RabbitMQ)
+- ✅ Distributed Tracing (Zipkin)
+- ✅ Database-per-Service (PostgreSQL)
 
 ---
 
 ## Architecture
 
-The system follows a **hybrid communication model**:
-
-- **Synchronous (REST)**: Critical path validation (Fraud check during registration)
-- **Asynchronous (AMQP)**: Non-blocking operations (Notification dispatch)
-
-Read the full architecture documentation: [HLD.md](./HLD.md)
-
----
-
-## Tech Stack
-
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| **Language** | Java | 17 |
-| **Framework** | Spring Boot | 2.5.7 |
-| **Cloud** | Spring Cloud | 2020.0.3 |
-| **Service Discovery** | Netflix Eureka | — |
-| **API Gateway** | Spring Cloud Gateway | — |
-| **Service Client** | OpenFeign | — |
-| **Message Broker** | RabbitMQ | 3.9 |
-| **Database** | PostgreSQL | 14+ |
-| **Tracing** | Zipkin | — |
-| **Build Tool** | Maven | 3.8+ |
-| **Containerization** | Docker & Docker Compose | — |
-
----
-
-## Project Structure
-
 ```
-amigosservices/
-├── pom.xml                    # Parent POM (dependency management)
-├── docker-compose.yml         # Full stack orchestration
-├── build-and-run.sh          # One-shot build & deploy script
-│
-├── eureka-server/            # Service discovery registry
-│   └── src/
-│
-├── apigw/                    # API Gateway (Spring Cloud Gateway)
-│   └── src/
-│
-├── customer/                 # Customer registration service
-│   └── src/
-│
-├── fraud/                    # Fraud detection service
-│   └── src/
-│
-├── notification/             # Notification dispatch service
-│   └── src/
-│
-├── clients/                  # Shared OpenFeign clients (library)
-│   └── src/
-│
-└── amqp/                     # Shared RabbitMQ config (library)
-    └── src/
+                    ┌─────────┐
+                    │ Client  │
+                    └────┬────┘
+                         │ HTTP
+                         ▼
+              ┌─────────────────────┐
+              │   API Gateway       │
+              │   Port: 8083        │
+              └──────────┬──────────┘
+                         │
+         ┌───────────────┼───────────────┐
+         ▼               ▼               ▼
+┌─────────────┐  ┌─────────────┐  ┌─────────────────┐
+│  Customer   │  │   Fraud     │  │  Notification   │
+│   8080      │  │   8081      │  │    8082         │
+└──────┬──────┘  └──────┬──────┘  └─────────────────┘
+       │                │
+       ▼                ▼
+┌─────────────┐  ┌─────────────┐
+│ PostgreSQL  │  │  RabbitMQ   │
+│ (customer)  │  │  (async)    │
+└─────────────┘  └─────────────┘
 ```
 
-### Module Overview
+### Services
 
-| Module | Type | Port | Description |
-|--------|------|------|-------------|
-| `eureka-server` | Infrastructure | 8761 | Service registry and discovery |
-| `apigw` | Infrastructure | 8083 | API Gateway and routing |
-| `customer` | Domain Service | 8080 | Customer onboarding and orchestration |
-| `fraud` | Domain Service | 8081 | Fraud risk assessment |
-| `notification` | Domain Service | 8082 | Notification processing (AMQP consumer) |
-| `clients` | Shared Library | — | Feign client interfaces |
-| `amqp` | Shared Library | — | RabbitMQ configuration |
+| Service | Port | Purpose |
+|---------|------|---------|
+| API Gateway | 8083 | Routes requests to services |
+| Customer | 8080 | Customer registration & orchestration |
+| Fraud | 8081 | Fraud risk assessment |
+| Notification | 8082 | Email/SMS notifications (AMQP consumer) |
+| Eureka | 8761 | Service discovery |
+| Zipkin | 9411 | Distributed tracing |
 
 ---
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- **Java 17 JDK** — [Download](https://adoptium.net/)
-- **Maven 3.8+** — [Download](https://maven.apache.org/download.cgi)
-- **Docker & Docker Compose** — [Download](https://docs.docker.com/get-docker/)
+- Java 17
+- Maven 3.8+
+- Docker & Docker Compose
 
-Verify installation:
-
-```bash
-java -version        # Should show Java 17
-mvn -version         # Should show Maven 3.8+
-docker --version     # Should show Docker 20.10+
-docker compose version
-```
-
-### Quick Start (Docker)
-
-The fastest way to run the entire stack:
+### Option 1: Docker (Easiest)
 
 ```bash
-# Clone the repository
+# Clone and build everything
 git clone https://github.com/amigoscode/microservices.git
 cd microservices
-
-# Build and run everything
 ./build-and-run.sh
 ```
 
-This script will:
-1. Compile all Maven modules
-2. Build Docker images using Jib
-3. Start infrastructure (PostgreSQL, RabbitMQ, Zipkin)
-4. Create database schemas
-5. Start all services in correct order
-6. Verify all endpoints are healthy
+This builds all services and starts the complete stack.
 
-**Access the services:**
+**Access:**
+- API: http://localhost:8083
+- Eureka: http://localhost:8761
+- Zipkin: http://localhost:9411
+- RabbitMQ: http://localhost:15672 (guest/guest)
 
-| Service | URL |
-|---------|-----|
-| API Gateway | http://localhost:8083 |
-| Eureka Dashboard | http://localhost:8761 |
-| Zipkin UI | http://localhost:9411 |
-| RabbitMQ Management | http://localhost:15672 (guest/guest) |
-| pgAdmin | http://localhost:5050 (pgadmin4@pgadmin.org/admin) |
+### Option 2: Local Development (with Hot Reload)
 
-### Local Development (Recommended)
-
-For active development with **hot-reload** via Spring Boot DevTools:
-
-**Step 1: Start Infrastructure**
+Best for active development:
 
 ```bash
+# 1. Start infrastructure only
 ./start-infra.sh
+
+# 2. Start services from IDE (in order):
+#    EurekaServerApplication → ApiGWApplication → 
+#    FraudApplication → CustomerApplication → NotificationApplication
 ```
 
-This starts PostgreSQL, RabbitMQ, Zipkin, and pgAdmin, and creates the required databases.
-
-**Step 2: Start Services (in order)**
-
-From your IDE, run the Spring Boot applications:
-
-1. **EurekaServerApplication** (wait for "Started EurekaServerApplication")
-2. **ApiGWApplication**
-3. **FraudApplication**
-4. **CustomerApplication**
-5. **NotificationApplication**
-
-> ⚠️ **Important**: Service startup order matters. Services will fail to start if Eureka is not available.
-
-**Step 3: Develop with Hot Reload**
-
-With Spring Boot DevTools enabled, any code changes will automatically restart the affected service in **2-3 seconds**:
-
-- ✅ Modify controller logic → Auto-restart
-- ✅ Change service implementation → Auto-restart
-- ✅ Update configuration → Auto-restart
-- ✅ Full IDE debugger support with breakpoints
-
-**Step 4: Verify**
-
-```bash
-# Check Eureka for registered services
-curl http://localhost:8761/eureka/apps
-
-# Check Customer Service health
-curl http://localhost:8080/actuator/health
-```
-
-**Stop Infrastructure**
-
-```bash
-docker compose -f docker-compose.infra.yml down
-```
+Changes auto-reload in 2-3 seconds with Spring Boot DevTools.
 
 ---
 
-## API Usage
+## Try It Out
 
 ### Register a Customer
 
@@ -258,10 +125,10 @@ curl -X POST http://localhost:8083/api/v1/customers \
 ```
 
 **What happens:**
-1. ✅ Customer record created in PostgreSQL
-2. ✅ Fraud check performed via synchronous REST call
-3. ✅ Notification event published to RabbitMQ
-4. ✅ Notification Service processes event asynchronously
+1. Customer saved to database
+2. Fraud check performed (synchronous)
+3. Notification queued (asynchronous)
+4. Returns 200 OK immediately
 
 ### Check Fraud Status
 
@@ -269,161 +136,72 @@ curl -X POST http://localhost:8083/api/v1/customers \
 curl http://localhost:8083/api/v1/fraud-check/1
 ```
 
-Response:
-```json
-{
-  "isFraudster": false
-}
+Response: `{"isFraudster": false}`
+
+---
+
+## Project Structure
+
 ```
-
-### Send Notification (Direct)
-
-```bash
-curl -X POST http://localhost:8083/api/v1/notification \
-  -H "Content-Type: application/json" \
-  -d '{
-    "toCustomerId": 1,
-    "toCustomerName": "Jane Doe",
-    "message": "Welcome to our platform!"
-  }'
+amigosservices/
+├── pom.xml                    # Parent POM
+├── docker-compose.yml         # Full stack
+├── build-and-run.sh           # Build & deploy script
+├── start-infra.sh             # Start infrastructure only
+│
+├── eureka-server/             # Service discovery
+├── apigw/                     # API Gateway
+├── customer/                  # Customer service
+├── fraud/                     # Fraud service
+├── notification/              # Notification service
+├── clients/                   # Shared Feign clients
+└── amqp/                      # Shared RabbitMQ config
 ```
-
-For complete API documentation, see [API.md](./API.md).
 
 ---
 
 ## Testing
 
-### Run All Tests
-
 ```bash
-# From project root
+# Run all tests
 mvn test
+
+# Run specific service tests
+mvn -pl customer test
+mvn -pl fraud test
+mvn -pl notification test
 ```
 
-### Run Tests for Specific Service
-
-```bash
-# Customer Service tests
-mvn -pl customer test -Dtest=CustomerControllerTest
-
-# Fraud Service tests
-mvn -pl fraud test -Dtest=FraudControllerTest
-
-# Notification Service tests
-mvn -pl notification test -Dtest=NotificationControllerTest
-```
-
-### Test Reports
-
-After running tests, view detailed reports:
-
-```
-customer/target/surefire-reports/
-fraud/target/surefire-reports/
-notification/target/surefire-reports/
-```
-
-### Test Architecture
-
-Tests use **`@WebMvcTest`** with MockMvc — they:
-- ✅ Do NOT require Docker or running services
-- ✅ Do NOT require PostgreSQL or RabbitMQ
-- ✅ Mock all external dependencies
-- ✅ Run fast as true unit tests
-
-> See [running_tests_guide.md](./running_tests_guide.md) for detailed testing documentation.
+Tests use `@WebMvcTest` + MockMvc - no Docker or running services required.
 
 ---
 
 ## Monitoring
 
-### Zipkin Distributed Tracing
+| Tool | URL | Purpose |
+|------|-----|---------|
+| Zipkin | http://localhost:9411 | Trace requests across services |
+| Eureka | http://localhost:8761 | See registered services |
+| RabbitMQ | http://localhost:15672 | View queues & messages |
 
-View request traces across all services:
-
-```bash
-open http://localhost:9411
-```
-
-Traces include:
-- API Gateway routing
-- Customer Service processing
-- Fraud Service client call
-- Database operations
-- RabbitMQ message publish
-
-### Eureka Service Registry
-
-View registered service instances:
-
-```bash
-open http://localhost:8761
-```
-
-### RabbitMQ Management
-
-Monitor queues, exchanges, and message flow:
-
-```bash
-open http://localhost:15672
-# Username: guest
-# Password: guest
-```
-
-### Health Endpoints
-
-All services expose health checks:
+### Health Checks
 
 ```bash
 curl http://localhost:8080/actuator/health  # Customer
 curl http://localhost:8081/actuator/health  # Fraud
-curl http://localhost:8082/actuator/health  # Notification
+curl http://localhost:8761/actuator/health  # Eureka
 ```
 
 ---
 
 ## Documentation
 
-| Document | Purpose |
-|----------|---------|
-| [HLD.md](./HLD.md) | High-level architecture, data flow, and design decisions |
-| [API.md](./API.md) | Complete API reference with examples |
-| [running_tests_guide.md](./running_tests_guide.md) | Testing documentation |
-| [AGENTS.md](./AGENTS.md) | Quick reference for AI coding assistants |
-
----
-
-## Environment Configuration
-
-### Spring Profiles
-
-| Profile | Use Case |
-|---------|----------|
-| `default` | Local IDE development (localhost URLs) |
-| `docker` | Container deployment (service names as hosts) |
-| `kube` | Kubernetes deployment |
-
-Set profile:
-
-```bash
-# Docker deployment
-export SPRING_PROFILES_ACTIVE=docker
-
-# Or via docker compose
-environment:
-  - SPRING_PROFILES_ACTIVE=docker
-```
-
-### Key Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SPRING_PROFILES_ACTIVE` | — | Spring profile selection |
-| `POSTGRES_USER` | `amigoscode` | PostgreSQL username |
-| `POSTGRES_PASSWORD` | `password` | PostgreSQL password |
-| `EUREKA_CLIENT_SERVICEURL_DEFAULTZONE` | `http://localhost:8761/eureka` | Eureka server URL |
-| `RABBITMQ_HOST` | `localhost` | RabbitMQ hostname |
+| Document | What's Inside |
+|----------|---------------|
+| [HLD.md](./HLD.md) | Architecture overview & data flow |
+| [API.md](./API.md) | API endpoints & examples |
+| [ZIPKIN_TRACING.md](./ZIPKIN_TRACING.md) | Tracing setup & troubleshooting |
+| [AGENTS.md](./AGENTS.md) | Developer quick reference |
 
 ---
 
@@ -431,70 +209,59 @@ environment:
 
 ### Services fail to start
 
-**Problem**: `Connection refused` to Eureka
+**Problem:** `Connection refused` to Eureka
 
-**Solution**: Ensure Eureka Server is fully started before other services. Check:
+**Fix:** Start Eureka first and wait for it to be ready:
 ```bash
 curl http://localhost:8761/actuator/health
 ```
 
-### Fraud check fails
+### Registration returns "fraudster" error
 
-**Problem**: Registration returns `500 Internal Server Error` with message "fraudster"
-
-**Solution**: This is expected behavior. The fraud service flags certain emails as fraudulent. Try a different email domain.
+This is expected! The fraud service flags certain emails. Try a different email.
 
 ### Database connection errors
 
-**Problem**: `PSQLException: Connection refused`
-
-**Solution**: Ensure PostgreSQL container is healthy:
 ```bash
+# Check PostgreSQL is running
 docker compose ps
 docker compose logs postgres
 ```
 
-### RabbitMQ connection errors
+---
 
-**Problem**: `AmqpConnectException: connect timeout`
+## Tech Stack
 
-**Solution**: Verify RabbitMQ is running:
-```bash
-docker compose ps rabbitmq
-curl http://localhost:15672
-```
+| Category | Technology |
+|----------|------------|
+| Language | Java 17 |
+| Framework | Spring Boot 2.5.7 |
+| Cloud | Spring Cloud 2020.0.3 |
+| Discovery | Netflix Eureka |
+| Gateway | Spring Cloud Gateway |
+| Communication | OpenFeign, RabbitMQ |
+| Database | PostgreSQL |
+| Tracing | Zipkin |
+| Build | Maven 3.8+ |
 
 ---
 
 ## Contributing
 
-This project serves as an educational reference architecture. Contributions are welcome for:
-
+Contributions welcome for:
 - Bug fixes
 - Documentation improvements
 - Additional test coverage
 - Resilience patterns (circuit breakers, retries)
-- Observability enhancements (metrics, alerting)
-
-Please open an issue before submitting significant changes or framework upgrades.
 
 ---
 
 ## License
 
-This project is released under the MIT License for educational purposes.
-
----
-
-**Key Learning Outcomes:**
-- Microservices architecture patterns
-- Service discovery and load balancing
-- Synchronous vs asynchronous communication
-- Distributed tracing and observability
-- Containerization and orchestration
+MIT License - For educational purposes.
 
 ---
 
 <p align="center">
-  <b>Built with ❤️.</b>
+  Built with microservices patterns 🚀
 </p>
