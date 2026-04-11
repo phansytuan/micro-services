@@ -37,7 +37,7 @@
         <image>amigoscode/${project.artifactId}:${project.version}</image>
     </properties>
 
-    <!-- import dependency versions -->
+    <!-- import dependency versionS -->
     <dependencyManagement>
         <dependencies>
 
@@ -60,7 +60,7 @@
         </dependencies>
     </dependencyManagement>
 
-    <!-- shared dependencies -->
+    <!-- Shared dependencies -->
     <dependencies>
 
         <dependency>
@@ -82,7 +82,7 @@
 
     <build>
 
-        <!-- plugin version control -->
+        <!-- Plugin version control -->
         <pluginManagement>
             <plugins>
 
@@ -133,7 +133,7 @@
             </plugins>
         </pluginManagement>
 
-        <!-- compiler -->
+        <!-- Compiler -->
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
