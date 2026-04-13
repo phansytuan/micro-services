@@ -18,7 +18,7 @@ public class CustomerService {
     public void registerCustomer(
             CustomerRegistrationRequest request
     ) {
-        Customer customer = Customer.builder()
+        Customer customer = Customer.builder() // builder pattern (lombok)
                 .firstName(request.firstName())
                 .lastName(request.lastName())
                 .email(request.email())

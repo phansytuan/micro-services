@@ -16,7 +16,6 @@
     <packaging>jar</packaging>
     <artifactId>customer</artifactId>
 
-    <!-- build -->
     <build>
         <plugins>
             <!-- spring boot plugin (version comes from parent) -->
@@ -42,7 +41,6 @@
         </profile>
     </profiles>
 
-    <!-- dependencies -->
     <dependencies>
 
         <!-- REST API -->
@@ -104,7 +102,7 @@
             <scope>compile</scope>
         </dependency>
 
-        <!-- devtools (hot reload) -->
+        <!-- hot reload -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-devtools</artifactId>
