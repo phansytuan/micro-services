@@ -32,7 +32,7 @@
 
         <spring.boot.maven.plugin.version>2.5.7</spring.boot.maven.plugin.version>
         <spring.boot.dependencies.version>2.5.7</spring.boot.dependencies.version>
-        <spring.cloud-version>2020.0.3</spring.cloud-version>
+        <spring.cloud-version>2020.0.3</spring.cloud-version> <!--Set Version here-->
 
         <image>amigoscode/${project.artifactId}:${project.version}</image>
     </properties>
@@ -49,7 +49,7 @@
                 <type>pom</type>
             </dependency>
 
-            <dependency>
+            <dependency> <!-- For Service Discovery, Sleuth, OpenFeign... -->
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
                 <version>${spring.cloud-version}</version>

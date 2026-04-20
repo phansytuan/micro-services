@@ -13,7 +13,9 @@ import org.springframework.context.annotation.PropertySources;
                 "com.amigoscode.amqp",
         }
 )
+
 @EnableEurekaClient
+
 @EnableFeignClients(
         basePackages = "com.amigoscode.clients"
 )

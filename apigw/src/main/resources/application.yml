@@ -7,12 +7,16 @@ spring:
     zipkin:
         base-url: http://localhost:9411
     cloud:
-       gateway:
-          routes:
-            - id: customer
-              uri: lb://CUSTOMER
-              predicates:
-                - Path=/api/v1/customers/**
+      gateway:
+        routes:
+          - id: customer  # ID của route (tùy đặt, để quản lý)
+            uri: lb://CUSTOMER
+            # lb:// = Spring Cloud LoadBalancer
+            # CUSTOMER = tên service đăng ký trong Eureka (application.name của service đó)
+
+            predicates:
+              - Path=/api/v1/customers/**
+              # Nếu request có path này → Gateway sẽ forward sang service CUSTOMER
 
 eureka:
     client:

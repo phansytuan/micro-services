@@ -1,30 +1,38 @@
 server:
-    port: 8080
+    port: 8080   # Port where this service runs
+
 spring:
     application:
-        name: customer
+        name: customer   # Service name (used to register in Eureka)
+
     datasource:
         url: jdbc:postgresql://localhost:5432/customer
         username: amigoscode
         password: password
+
     jpa:
         hibernate:
-            ddl-auto: create-drop
+            ddl-auto: create-drop   # Create schema on start, drop on shutdown (dev only)
         properties:
             hibernate:
-                dialect: org.hibernate.dialect.PostgreSQLDialect
-                format_sql: true
-        show-sql: true
+                dialect: org.hibernate.dialect.PostgreSQLDialect  # PostgreSQL dialect
+                format_sql: true                                  # Pretty print SQL
+        show-sql: true   # Log SQL queries to console
+
     zipkin:
-        base-url: http://localhost:9411
+        base-url: http://localhost:9411   # Distributed tracing server
+
     rabbitmq:
-        addresses: localhost:5672
+        addresses: localhost:5672   # RabbitMQ broker address (for messaging)
+
     profiles:
         active: default
+
 eureka:
     client:
         service-url:
-            defaultZone: http://localhost:8761/eureka
-        fetch-registry: true
-        register-with-eureka: true
-        enabled: true
+            defaultZone: http://localhost:8761/eureka   # Eureka Server URL
+
+        fetch-registry: true        # Fetch list of services from Eureka
+        register-with-eureka: true  # Register this service to Eureka
+        enabled: true               # Enable Eureka client

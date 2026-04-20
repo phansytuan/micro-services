@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class FraudCheckService {
 
-    private final FraudCheckHistoryRepository fraudCheckHistoryRepository;
+    private final FraudCheckHistoryRepository fraudCheckHistoryRepository; // store the fact that there was a FraudCheck that took place
 
     public boolean isFraudulentCustomer(Integer customerId) {
 
