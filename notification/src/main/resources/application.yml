@@ -1,12 +1,13 @@
 server:
     port: 8082
+
 spring:
     application:
         name: notification
     datasource:
+        username: amigoscode
         password: password
         url: jdbc:postgresql://localhost:5432/notification
-        username: amigoscode
     jpa:
         hibernate:
             ddl-auto: create-drop
@@ -21,6 +22,19 @@ spring:
         addresses: localhost:5672
     profiles:
         active: default
+
+# Springdoc OpenAPI Configuration
+springdoc:
+    api-docs:
+        path: /v3/api-docs
+        enabled: true
+    swagger-ui:
+        path: /swagger-ui.html
+        enabled: true
+        operations-sorter: method
+        tags-sorter: alpha
+    use-management-port: false
+
 eureka:
     client:
         service-url:
@@ -36,4 +50,3 @@ rabbitmq:
         notification: notification.queue
     routing-keys:
         internal-notification: internal.notification.routing-key
-

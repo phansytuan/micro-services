@@ -32,12 +32,13 @@
 
         <spring.boot.maven.plugin.version>2.5.7</spring.boot.maven.plugin.version>
         <spring.boot.dependencies.version>2.5.7</spring.boot.dependencies.version>
-        <spring.cloud-version>2020.0.3</spring.cloud-version> <!--Set Version here-->
+        <spring.cloud-version>2020.0.3</spring.cloud-version> <!--Set version here-->
+        <springdoc-openapi.version>1.6.14</springdoc-openapi.version>
 
         <image>amigoscode/${project.artifactId}:${project.version}</image>
     </properties>
 
-    <!-- import dependency versionS -->
+    <!-- import dependency versions -->
     <dependencyManagement>
         <dependencies>
 
@@ -49,12 +50,26 @@
                 <type>pom</type>
             </dependency>
 
-            <dependency> <!-- For Service Discovery, Sleuth, OpenFeign... -->
+            <dependency> <!-- for Service Discovery, Sleuth, OpenFeign... -->
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
                 <version>${spring.cloud-version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+
+            <!-- Springdoc OpenAPI (servlet-based services) -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-ui</artifactId>
+                <version>${springdoc-openapi.version}</version>
+            </dependency>
+
+            <!-- Springdoc OpenAPI (WebFlux / reactive gateway) -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-webflux-ui</artifactId>
+                <version>${springdoc-openapi.version}</version>
             </dependency>
 
         </dependencies>
@@ -99,7 +114,7 @@
                     <executions>
                         <execution>
                             <goals>
-                                <goal>repackage</goal>
+                                <goal>repackage</goal> <!-- đóng gói lại thành executable JAR (fat JAR chứa dependencies), nếu thiếu → không chạy được độc lập -->
                             </goals>
                         </execution>
                     </executions>

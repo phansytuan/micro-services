@@ -95,6 +95,12 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Springdoc OpenAPI -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-ui</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>

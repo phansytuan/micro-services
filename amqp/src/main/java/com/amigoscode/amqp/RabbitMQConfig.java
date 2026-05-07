@@ -16,6 +16,7 @@ public class RabbitMQConfig {
 
     private final ConnectionFactory connectionFactory;
 
+    // Producer: sends messages with JSON serialization
     @Bean
     public AmqpTemplate amqpTemplate() {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
@@ -23,6 +24,7 @@ public class RabbitMQConfig {
         return rabbitTemplate;
     }
 
+    // Consumer: ensures @RabbitListener uses JSON deserialization
     @Bean
     public SimpleRabbitListenerContainerFactory simpleRabbitListenerContainerFactory() {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
@@ -31,6 +33,7 @@ public class RabbitMQConfig {
         return factory;
     }
 
+    // Shared JSON converter (Java <-> JSON)
     @Bean
     public MessageConverter jacksonConverter() {
         MessageConverter jackson2JsonMessageConverter = new Jackson2JsonMessageConverter();

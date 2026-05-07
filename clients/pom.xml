@@ -30,4 +30,12 @@
         </plugins>
     </build>
 
+    <dependencies>
+        <!-- Springdoc OpenAPI for DTO annotations -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-ui</artifactId>
+        </dependency>
+    </dependencies>
+
 </project>

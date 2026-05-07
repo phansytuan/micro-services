@@ -26,7 +26,7 @@
         </plugins>
     </build>
 
-    <!-- optional Docker build profile -->
+    <!-- optional Docker build profile. Nếu không dùng profile mà để Jib trong build mặc định → mỗi lần mvn package đều cố push Docker image lên registry ! -->
     <profiles>
         <profile>
             <id>build-docker-image</id>
@@ -40,6 +40,9 @@
             </build>
         </profile>
     </profiles>
+    <!-- Maven profile build-docker-image dùng để tách biệt 2 hành động:
+        mvn package                        # chỉ build JAR → dùng khi dev local
+        mvn package -P build-docker-image  # build JAR + tạo Docker image → dùng khi deploy -->
 
     <!-- dependencies -->
     <dependencies>

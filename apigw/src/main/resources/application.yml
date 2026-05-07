@@ -8,6 +8,8 @@ spring:
         base-url: http://localhost:9411
     cloud:
       gateway:
+        forwarded:
+            enabled: true
         routes:
           - id: customer  # ID của route (tùy đặt, để quản lý)
             uri: lb://CUSTOMER
@@ -18,9 +20,69 @@ spring:
               - Path=/api/v1/customers/**
               # Nếu request có path này → Gateway sẽ forward sang service CUSTOMER
 
+          # Redirect .html shortcut to actual index page (gateway-level, prefix preserved)
+          - id: customer-swagger-redirect
+            uri: lb://CUSTOMER
+            predicates:
+              - Path=/customer/swagger-ui.html
+            filters:
+              - RedirectTo=302, /customer/swagger-ui/index.html
+
+          - id: fraud-swagger-redirect
+            uri: lb://FRAUD
+            predicates:
+              - Path=/fraud/swagger-ui.html
+            filters:
+              - RedirectTo=302, /fraud/swagger-ui/index.html
+
+          - id: notification-swagger-redirect
+            uri: lb://NOTIFICATION
+            predicates:
+              - Path=/notification/swagger-ui.html
+            filters:
+              - RedirectTo=302, /notification/swagger-ui/index.html
+
+          # Serve swagger assets (UI, api-docs, webjars)
+          - id: customer-swagger
+            uri: lb://CUSTOMER
+            predicates:
+              - Path=/customer/swagger-ui/**, /customer/v3/api-docs, /customer/v3/api-docs/**, /customer/webjars/**
+            filters:
+              - StripPrefix=1
+
+          - id: fraud-swagger
+            uri: lb://FRAUD
+            predicates:
+              - Path=/fraud/swagger-ui/**, /fraud/v3/api-docs, /fraud/v3/api-docs/**, /fraud/webjars/**
+            filters:
+              - StripPrefix=1
+
+          - id: notification-swagger
+            uri: lb://NOTIFICATION
+            predicates:
+              - Path=/notification/swagger-ui/**, /notification/v3/api-docs, /notification/v3/api-docs/**, /notification/webjars/**
+            filters:
+              - StripPrefix=1
+
 eureka:
     client:
         service-url:
             defaultZone: http://localhost:8761/eureka
         fetch-registry: true
         register-with-eureka: true
+
+# Swagger UI aggregator — combines all service docs into one UI at http://localhost:8083/swagger-ui.html
+springdoc:
+    swagger-ui:
+        path: /swagger-ui.html
+        # List each service's api-docs URL (routed through the gateway)
+        urls:
+            - name: Customer Service
+              url: /customer/v3/api-docs
+            - name: Fraud Service
+              url: /fraud/v3/api-docs
+            - name: Notification Service
+              url: /notification/v3/api-docs
+        urls-primary-name: Customer Service
+    api-docs:
+        enabled: false   # Gateway has no REST endpoints of its own

@@ -8,6 +8,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
 
+/**
+ * Entry point for the Notification microservice.
+
+ * Responsibilities:
+ * - bootstraps the SpringBoot application context
+ * - Scans required packages for Components: (notification + shared AMQP module)
+ * - Loads environment-specific client-configuration properties
+ */
 @SpringBootApplication(
         scanBasePackages = {
                 "com.amigoscode.notification",
@@ -15,6 +23,7 @@ import org.springframework.context.annotation.PropertySources;
         }
 )
 @PropertySources({
+        // Load profile-specific configuration file (e.g., clients-default.properties)
         @PropertySource("classpath:clients-${spring.profiles.active}.properties")
 })
 public class NotificationApplication {
