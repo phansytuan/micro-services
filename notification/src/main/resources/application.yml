@@ -21,7 +21,7 @@ spring:
     rabbitmq:
         addresses: localhost:5672
     profiles:
-        active: default
+        active: default # ${spring.profiles.active}
 
 # Springdoc OpenAPI Configuration
 springdoc:

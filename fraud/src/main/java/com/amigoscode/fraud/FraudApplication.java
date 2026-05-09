@@ -10,6 +10,10 @@ import org.springframework.context.annotation.PropertySources;
 @EnableEurekaClient
 @PropertySources({
         @PropertySource("classpath:clients-${spring.profiles.active}.properties")
+        // Example:
+        //  clients-default.properties
+        //  clients-kube.properties
+        //  clients-docker.properties
 })
 public class FraudApplication {
     public static void main(String[] args) {

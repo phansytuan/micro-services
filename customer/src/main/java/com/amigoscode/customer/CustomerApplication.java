@@ -10,17 +10,21 @@ import org.springframework.context.annotation.PropertySources;
 @SpringBootApplication(
         scanBasePackages = {
                 "com.amigoscode.customer",
-                "com.amigoscode.amqp",
+                "com.amigoscode.amqp"
         }
 )
-
 @EnableEurekaClient
-
 @EnableFeignClients(
         basePackages = "com.amigoscode.clients"
 )
 @PropertySources({
-        @PropertySource("classpath:clients-${spring.profiles.active}.properties")
+        @PropertySource(
+                "classpath:clients-${spring.profiles.active}.properties"
+        )
+        // Example:
+        //  clients-default.properties
+        //  clients-kube.properties
+        //  clients-docker.properties
 })
 public class CustomerApplication {
     public static void main(String[] args) {

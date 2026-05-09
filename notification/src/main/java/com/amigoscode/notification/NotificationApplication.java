@@ -1,10 +1,10 @@
 package com.amigoscode.notification;
 
-import com.amigoscode.amqp.RabbitMQMessageProducer;
+import org.springframework.context.annotation.Bean;
 import org.springframework.boot.CommandLineRunner;
+import com.amigoscode.amqp.RabbitMQMessageProducer;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
 
@@ -19,11 +19,11 @@ import org.springframework.context.annotation.PropertySources;
 @SpringBootApplication(
         scanBasePackages = {
                 "com.amigoscode.notification",
-                "com.amigoscode.amqp",
+                "com.amigoscode.amqp"
         }
 )
 @PropertySources({
-        // Load profile-specific configuration file (e.g., clients-default.properties)
+        // Load profile-specific configuration file (e.g., clients-default.properties //  clients-kube.properties //  clients-docker.properties)
         @PropertySource("classpath:clients-${spring.profiles.active}.properties")
 })
 public class NotificationApplication {

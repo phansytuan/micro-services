@@ -26,7 +26,7 @@ spring:
         addresses: localhost:5672   # RabbitMQ broker address (for messaging)
 
     profiles:
-        active: default
+        active: default # ${spring.profiles.active}
 
 # Springdoc OpenAPI Configuration
 springdoc:
